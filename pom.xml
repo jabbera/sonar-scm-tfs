@@ -13,7 +13,7 @@
 
   <properties>
     <sonar.buildVersion>5.0-SNAPSHOT</sonar.buildVersion>
-    <sonar.pluginName>TFS Provider</sonar.pluginName>
+    <sonar.pluginName>TFS</sonar.pluginName>
     <sonar.pluginClass>org.sonar.plugins.scm.tfs.TfsPlugin</sonar.pluginClass>
   </properties>
 

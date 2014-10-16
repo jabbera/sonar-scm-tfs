@@ -68,6 +68,10 @@ public class TfsBlameCommand extends BlameCommand {
         throw new IllegalStateException("The TFS blame command [" + cl.toString() + "] failed: " + stderr.getOutput());
       }
       List<BlameLine> lines = consumer.getLines();
+      if (lines.size() == inputFile.lines() - 1) {
+        // SONARPLUGINS-3097 Tfs do not report blame on last empty line
+        lines.add(lines.get(lines.size() - 1));
+      }
       output.blameResult(inputFile, lines);
     }
   }
