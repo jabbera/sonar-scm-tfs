@@ -23,8 +23,6 @@ import com.google.common.io.Files;
 import com.google.common.io.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.sonar.api.BatchComponent;
-import org.sonar.api.batch.InstantiationStrategy;
 import org.sonar.api.batch.fs.FileSystem;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.scm.BlameCommand;
@@ -39,8 +37,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
-@InstantiationStrategy(InstantiationStrategy.PER_BATCH)
-public class TfsBlameCommand implements BlameCommand, BatchComponent {
+public class TfsBlameCommand extends BlameCommand {
 
   private static final Logger LOG = LoggerFactory.getLogger(TfsBlameCommand.class);
   private final CommandExecutor commandExecutor;
@@ -56,10 +53,11 @@ public class TfsBlameCommand implements BlameCommand, BatchComponent {
   }
 
   @Override
-  public void blame(FileSystem fs, Iterable<InputFile> files, BlameResult result) {
+  public void blame(BlameInput input, BlameOutput output) {
     File tfsExe = extractTfsAnnotate();
+    FileSystem fs = input.fileSystem();
     LOG.debug("Working directory: " + fs.baseDir().getAbsolutePath());
-    for (InputFile inputFile : files) {
+    for (InputFile inputFile : input.filesToBlame()) {
       String filename = inputFile.relativePath();
       Command cl = createCommandLine(tfsExe, fs.baseDir(), filename);
       TfsBlameConsumer consumer = new TfsBlameConsumer(filename);
@@ -70,7 +68,7 @@ public class TfsBlameCommand implements BlameCommand, BatchComponent {
         throw new IllegalStateException("The TFS blame command [" + cl.toString() + "] failed: " + stderr.getOutput());
       }
       List<BlameLine> lines = consumer.getLines();
-      result.add(inputFile, lines);
+      output.blameResult(inputFile, lines);
     }
   }
 

@@ -69,7 +69,7 @@ public class TfsBlameConsumer implements StreamConsumer {
 
       Date date = parseDate(dateStr);
 
-      lines.add(new BlameLine(date, revision, author));
+      lines.add(new BlameLine().date(date).revision(revision).author(author));
     }
   }
 

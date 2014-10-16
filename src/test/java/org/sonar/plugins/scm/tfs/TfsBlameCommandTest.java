@@ -30,7 +30,8 @@ import org.mockito.stubbing.Answer;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.fs.internal.DefaultFileSystem;
 import org.sonar.api.batch.fs.internal.DefaultInputFile;
-import org.sonar.api.batch.scm.BlameCommand.BlameResult;
+import org.sonar.api.batch.scm.BlameCommand.BlameInput;
+import org.sonar.api.batch.scm.BlameCommand.BlameOutput;
 import org.sonar.api.batch.scm.BlameLine;
 import org.sonar.api.utils.DateUtils;
 import org.sonar.api.utils.command.Command;
@@ -58,6 +59,7 @@ public class TfsBlameCommandTest {
 
   private DefaultFileSystem fs;
   private File baseDir;
+  private BlameInput input;
 
   private DefaultTempFolder tempFolder;
 
@@ -67,6 +69,8 @@ public class TfsBlameCommandTest {
     fs = new DefaultFileSystem();
     fs.setBaseDir(baseDir);
     tempFolder = new DefaultTempFolder(temp.newFolder());
+    input = mock(BlameInput.class);
+    when(input.fileSystem()).thenReturn(fs);
   }
 
   @Test
@@ -76,7 +80,7 @@ public class TfsBlameCommandTest {
     DefaultInputFile inputFile = new DefaultInputFile("foo", "src/foo.xoo").setAbsolutePath(new File(baseDir, "src/foo.xoo").getAbsolutePath());
     fs.add(inputFile);
 
-    BlameResult result = mock(BlameResult.class);
+    BlameOutput result = mock(BlameOutput.class);
     CommandExecutor commandExecutor = mock(CommandExecutor.class);
 
     when(commandExecutor.execute(any(Command.class), any(StreamConsumer.class), any(StreamConsumer.class), anyLong())).thenAnswer(new Answer<Integer>() {
@@ -90,10 +94,11 @@ public class TfsBlameCommandTest {
       }
     });
 
-    new TfsBlameCommand(commandExecutor, tempFolder).blame(fs, Arrays.<InputFile>asList(inputFile), result);
-    verify(result).add(inputFile,
-      Arrays.asList(new BlameLine(DateUtils.parseDate("2014-07-10"), "26274", "SND\\DinSoft_cp"),
-        new BlameLine(DateUtils.parseDate("2014-07-10"), "26274", "SND\\DinSoft_cp")));
+    when(input.filesToBlame()).thenReturn(Arrays.<InputFile>asList(inputFile));
+    new TfsBlameCommand(commandExecutor, tempFolder).blame(input, result);
+    verify(result).blameResult(inputFile,
+      Arrays.asList(new BlameLine().date(DateUtils.parseDate("2014-07-10")).revision("26274").author("SND\\DinSoft_cp"),
+        new BlameLine().date(DateUtils.parseDate("2014-07-10")).revision("26274").author("SND\\DinSoft_cp")));
   }
 
   @Test
@@ -103,7 +108,7 @@ public class TfsBlameCommandTest {
     DefaultInputFile inputFile = new DefaultInputFile("foo", "src/foo.xoo").setAbsolutePath(new File(baseDir, "src/foo.xoo").getAbsolutePath());
     fs.add(inputFile);
 
-    BlameResult result = mock(BlameResult.class);
+    BlameOutput result = mock(BlameOutput.class);
     CommandExecutor commandExecutor = mock(CommandExecutor.class);
 
     when(commandExecutor.execute(any(Command.class), any(StreamConsumer.class), any(StreamConsumer.class), anyLong())).thenAnswer(new Answer<Integer>() {
@@ -120,7 +125,8 @@ public class TfsBlameCommandTest {
 
     thrown.expect(IllegalStateException.class);
     thrown.expectMessage("Unable to blame file src/foo.xoo. No blame info at line 2. Is file commited?");
-    new TfsBlameCommand(commandExecutor, tempFolder).blame(fs, Arrays.<InputFile>asList(inputFile), result);
+    when(input.filesToBlame()).thenReturn(Arrays.<InputFile>asList(inputFile));
+    new TfsBlameCommand(commandExecutor, tempFolder).blame(input, result);
   }
 
   @Test
@@ -130,7 +136,7 @@ public class TfsBlameCommandTest {
     DefaultInputFile inputFile = new DefaultInputFile("foo", "src/foo.xoo").setAbsolutePath(new File(baseDir, "src/foo.xoo").getAbsolutePath());
     fs.add(inputFile);
 
-    BlameResult result = mock(BlameResult.class);
+    BlameOutput result = mock(BlameOutput.class);
     CommandExecutor commandExecutor = mock(CommandExecutor.class);
 
     when(commandExecutor.execute(any(Command.class), any(StreamConsumer.class), any(StreamConsumer.class), anyLong())).thenAnswer(new Answer<Integer>() {
@@ -147,7 +153,8 @@ public class TfsBlameCommandTest {
     thrown.expectMessage("The TFS blame command [");
     thrown.expectMessage(".exe src/foo.xoo] failed: My error");
 
-    new TfsBlameCommand(commandExecutor, tempFolder).blame(fs, Arrays.<InputFile>asList(inputFile), result);
+    when(input.filesToBlame()).thenReturn(Arrays.<InputFile>asList(inputFile));
+    new TfsBlameCommand(commandExecutor, tempFolder).blame(input, result);
   }
 
 }
