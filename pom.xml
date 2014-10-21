@@ -8,6 +8,7 @@
   </parent>
   <artifactId>sonar-tfs-plugin</artifactId>
   <name>SonarQube :: Plugins :: TFS</name>
+  <version>1.0-SNAPSHOT</version>
   <packaging>sonar-plugin</packaging>
   <description>TFS SCM Provider.</description>
 
