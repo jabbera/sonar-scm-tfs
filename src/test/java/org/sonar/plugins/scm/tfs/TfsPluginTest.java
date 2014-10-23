@@ -1,5 +1,5 @@
 /*
- * SonarQube :: Plugins :: TFS
+ * SonarQube :: Plugins :: SCM :: TFS
  * Copyright (C) 2009 ${owner}
  * dev@sonar.codehaus.org
  *
