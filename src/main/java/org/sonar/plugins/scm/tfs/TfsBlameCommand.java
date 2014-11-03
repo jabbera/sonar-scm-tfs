@@ -35,7 +35,13 @@ import org.sonar.api.utils.command.StringStreamConsumer;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class TfsBlameCommand extends BlameCommand {
 
@@ -57,23 +63,52 @@ public class TfsBlameCommand extends BlameCommand {
     File tfsExe = extractTfsAnnotate();
     FileSystem fs = input.fileSystem();
     LOG.debug("Working directory: " + fs.baseDir().getAbsolutePath());
+    ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 1);
+    List<Future<Void>> tasks = new ArrayList<Future<Void>>();
     for (InputFile inputFile : input.filesToBlame()) {
-      String filename = inputFile.relativePath();
-      Command cl = createCommandLine(tfsExe, fs.baseDir(), filename);
-      TfsBlameConsumer consumer = new TfsBlameConsumer(filename);
-      StringStreamConsumer stderr = new StringStreamConsumer();
-
-      int exitCode = execute(cl, consumer, stderr);
-      if (exitCode != 0) {
-        throw new IllegalStateException("The TFS blame command [" + cl.toString() + "] failed: " + stderr.getOutput());
-      }
-      List<BlameLine> lines = consumer.getLines();
-      if (lines.size() == inputFile.lines() - 1) {
-        // SONARPLUGINS-3097 Tfs do not report blame on last empty line
-        lines.add(lines.get(lines.size() - 1));
-      }
-      output.blameResult(inputFile, lines);
+      tasks.add(submitTask(tfsExe, fs, output, executorService, inputFile));
     }
+
+    for (Future<Void> task : tasks) {
+      try {
+        task.get();
+      } catch (ExecutionException e) {
+        // Unwrap ExecutionException
+        throw e.getCause() instanceof RuntimeException ? (RuntimeException) e.getCause() : new IllegalStateException(e.getCause());
+      } catch (InterruptedException e) {
+        throw new IllegalStateException(e);
+      }
+    }
+  }
+
+  private Future<Void> submitTask(final File tfsExe, final FileSystem fs, final BlameOutput result, ExecutorService executorService, final InputFile inputFile) {
+    return executorService.submit(new Callable<Void>() {
+      @Override
+      public Void call() {
+        blame(tfsExe, fs, inputFile, result);
+        return null;
+      }
+
+    });
+  }
+
+  private void blame(File tfsExe, FileSystem fs, InputFile inputFile, BlameOutput output) {
+    String filename = inputFile.relativePath();
+    Command cl = createCommandLine(tfsExe, fs.baseDir(), filename);
+    TfsBlameConsumer consumer = new TfsBlameConsumer(filename);
+    StringStreamConsumer stderr = new StringStreamConsumer();
+
+    int exitCode = execute(cl, consumer, stderr);
+    if (exitCode != 0) {
+      throw new IllegalStateException("The TFS blame command [" + cl.toString() + "] failed: " + stderr.getOutput());
+    }
+    List<BlameLine> lines = consumer.getLines();
+    if (lines.size() == inputFile.lines() - 1) {
+      // SONARPLUGINS-3097 Tfs do not report blame on last empty line
+      lines.add(lines.get(lines.size() - 1));
+    }
+    output.blameResult(inputFile, lines);
+
   }
 
   private File extractTfsAnnotate() {
@@ -93,9 +128,7 @@ public class TfsBlameCommand extends BlameCommand {
 
   private Command createCommandLine(File tfsExe, File workingDirectory, String filename) {
     Command cl = Command.create(tfsExe.getAbsolutePath());
-    if (workingDirectory != null) {
-      cl.setDirectory(workingDirectory);
-    }
+    cl.setDirectory(workingDirectory);
     cl.addArgument(filename);
     return cl;
   }
