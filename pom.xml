@@ -8,7 +8,7 @@
   </parent>
   <artifactId>sonar-scm-tfs-plugin</artifactId>
   <name>SonarQube :: Plugins :: SCM :: TFS</name>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.0</version>
   <packaging>sonar-plugin</packaging>
   <description>TFS SCM Provider.</description>
   <url>http://redirect.sonarsource.com/plugins/scmtfs.html</url>
@@ -39,6 +39,7 @@
     <connection>scm:git:git@github.com:SonarCommunity/sonar-scm-tfs.git</connection>
     <developerConnection>scm:git:git@github.com:SonarCommunity/sonar-scm-tfs.git</developerConnection>
     <url>https://github.com/SonarCommunity/sonar-scm-tfs</url>
+    <tag>1.0</tag>
   </scm>
   
   <issueManagement>
