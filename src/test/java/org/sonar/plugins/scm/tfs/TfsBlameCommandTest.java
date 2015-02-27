@@ -133,7 +133,7 @@ public class TfsBlameCommandTest {
   public void testExecutionError() throws IOException {
     File source = new File(baseDir, "src/foo.xoo");
     FileUtils.write(source, "sample content");
-    DefaultInputFile inputFile = new DefaultInputFile("foo", "src/foo.xoo").setAbsolutePath(new File(baseDir, "src/foo.xoo").getAbsolutePath());
+    DefaultInputFile inputFile = new DefaultInputFile("foo", "src/foo.xoo").setAbsolutePath(source.getAbsolutePath());
     fs.add(inputFile);
 
     BlameOutput result = mock(BlameOutput.class);
@@ -151,7 +151,7 @@ public class TfsBlameCommandTest {
 
     thrown.expect(IllegalStateException.class);
     thrown.expectMessage("The TFS blame command [");
-    thrown.expectMessage(".exe src/foo.xoo] failed: My error");
+    thrown.expectMessage(".exe " + source.getAbsolutePath() + "] failed: My error");
 
     when(input.filesToBlame()).thenReturn(Arrays.<InputFile>asList(inputFile));
     new TfsBlameCommand(commandExecutor, tempFolder).blame(input, result);
