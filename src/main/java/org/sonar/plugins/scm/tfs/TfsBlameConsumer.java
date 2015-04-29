@@ -22,8 +22,9 @@ package org.sonar.plugins.scm.tfs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.batch.scm.BlameLine;
-import org.sonar.api.utils.command.StreamConsumer;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -34,7 +35,7 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class TfsBlameConsumer implements StreamConsumer {
+public class TfsBlameConsumer {
 
   private static final Logger LOG = LoggerFactory.getLogger(TfsBlameConsumer.class);
 
@@ -45,31 +46,32 @@ public class TfsBlameConsumer implements StreamConsumer {
 
   private static final Pattern LINE_PATTERN = Pattern.compile("([^ ]+)[ ]+([^ ]+)[ ]+([^ ]+)");
 
-  private List<BlameLine> lines = new ArrayList<BlameLine>();
+  private final List<BlameLine> lines = new ArrayList<BlameLine>();
 
-  private DateFormat format;
+  private final DateFormat format = new SimpleDateFormat(TFS_TIMESTAMP_PATTERN);
 
   private final String filename;
 
   public TfsBlameConsumer(String filename) {
     this.filename = filename;
-    format = new SimpleDateFormat(TFS_TIMESTAMP_PATTERN);
   }
 
-  @Override
-  public void consumeLine(String line) {
-    if (line.startsWith("local") || line.startsWith("unknow")) {
-      throw new IllegalStateException("Unable to blame file " + filename + ". No blame info at line " + (getLines().size() + 1) + ". Is file commited?\n [" + line + "]");
-    }
-    Matcher matcher = LINE_PATTERN.matcher(line);
-    if (matcher.find()) {
-      String revision = matcher.group(1).trim();
-      String author = matcher.group(2).trim();
-      String dateStr = matcher.group(3).trim();
+  public void process(BufferedReader stdout) throws IOException {
+    String line;
+    while ((line = stdout.readLine()) != null) {
+      if (line.startsWith("local") || line.startsWith("unknow")) {
+        throw new IllegalStateException("Unable to blame file " + filename + ". No blame info at line " + (getLines().size() + 1) + ". Is file commited?\n [" + line + "]");
+      }
+      Matcher matcher = LINE_PATTERN.matcher(line);
+      if (matcher.find()) {
+        String revision = matcher.group(1).trim();
+        String author = matcher.group(2).trim();
+        String dateStr = matcher.group(3).trim();
 
-      Date date = parseDate(dateStr);
+        Date date = parseDate(dateStr);
 
-      lines.add(new BlameLine().date(date).revision(revision).author(author));
+        lines.add(new BlameLine().date(date).revision(revision).author(author));
+      }
     }
   }
 
